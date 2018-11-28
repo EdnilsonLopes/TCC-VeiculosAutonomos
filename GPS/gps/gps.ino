@@ -6,7 +6,7 @@
 #include <SoftwareSerial.h>
 
 //Pinos utilizados para conexao do modulo GY-NEO6MV2
-static const int RXPin = 4, TXPin = 3;
+static const int RXPin = 10, TXPin = 9;
 
 //Objeto TinyGPS++
 TinyGPSPlus gps;
@@ -41,17 +41,17 @@ void setup()
 void loop()
 {
   //Conexao com modulo GPS
-  //while (Serial_GPS.available() > 0)
+ while (Serial_GPS.available() > 0)
     if (gps.encode(Serial_GPS.read()))
       displayInfo();
 
-  //if (millis() > 5000 && gps.charsProcessed() < 10)
-  //{
-   // Serial.println(F("No GPS detected: check wiring."));
-    //while (true);
-  //}
+  if (millis() > 5000 && gps.charsProcessed() < 10)
+  {
+   Serial.println(F("No GPS detected: check wiring."));
+    while (true);
+  }
 
-  //delay(1000);
+  delay(1000);
 }
 
 void displayInfo()
