@@ -1,12 +1,10 @@
-//Programa: Modulo GPS GY-NEO6MV2 com Arduino Uno
-//Autor: Arduino e Cia
 
 #include <TimeLib.h>
 #include <TinyGPS++.h>
 #include <SoftwareSerial.h>
 
 //Pinos utilizados para conexao do modulo GY-NEO6MV2
-static const int RXPin = 10, TXPin = 9;
+static const int RXPin = 9, TXPin = 10;
 
 //Objeto TinyGPS++
 TinyGPSPlus gps;
