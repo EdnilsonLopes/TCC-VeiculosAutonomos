@@ -1,5 +1,8 @@
 //@Autor: Ednilson Brito Lopes
 #include <Servo.h>  //Inclui a biblioteca de manipulação de servos
+#include <TimeLib.h>
+#include <TinyGPS++.h>
+#include <SoftwareSerial.h>
 
 //Definindo os pinos
 #define trigPin A0 //Pino TRIG do sensor no pino analógico A0
@@ -11,8 +14,17 @@
 #define in4 6 //Pino do motor B
 #define enB 7 //Pino que mantem a velocidade do motorB
 
+//Pinos utilizados para conexao do modulo GY-NEO6MV2
+static const int RXPin = 11, TXPin = 12;
+
+//Objeto TinyGPS++
+TinyGPSPlus gps;
+
+//Conexao serial do modulo GPS
+SoftwareSerial Serial_GPS(RXPin, TXPin);
+
 int tempoGirar = 1;//esse é o tempo para o robô girar em 45º com uma bateria de 9v.
-int distanciaObstaculo = 50; //distância para o robô parar e recalcular o melhor caminho
+int distanciaObstaculo = 37; //distância para o robô parar e recalcular o melhor caminho
 int velocidadeMotores = 130; // velocidade que os motores funcionarão na bateria 9v. Para a bateria 9v a velocidade 80 é ideal
 
 Servo servo_ultra_sonico; // nomeando o servo motor
@@ -24,7 +36,9 @@ int maximumRange = 200;
 
 void setup() {
   Serial.begin(9600); // inicializa a comunicação serial para mostrar dados
-  servo_ultra_sonico.attach(8);  // Define o mini servo motor ligado no pino digital 10.
+  //Baud rate Modulo GPS
+  Serial_GPS.begin(9600);
+  servo_ultra_sonico.attach(8);  // Define o mini servo motor ligado no pino digital 8.
   pinMode(trigPin, OUTPUT); //define o pino TRIG como saída
   pinMode(echoPin, INPUT);  //define o pino ECHO como entrada
   pinMode(in1, OUTPUT);
@@ -51,6 +65,7 @@ void loop() {
 
 // Função para chamar outras funções e definir o que o robô fará
 void pensar() {
+  displayInfo();
   reposicionaServoSonar(); //Coloca o servo para olhar a frente
   int distancia = lerSonar(); // Ler o sensor de distância
   Serial.print("distancia em cm: ");
@@ -248,4 +263,60 @@ int lerSonar() {
 void reposicionaServoSonar() {
   servo_ultra_sonico.write(90);
   delay(200);
+}
+
+void displayInfo()
+{
+
+  if (gps.location.isValid())
+  {
+    Serial.print(gps.location.lat(), 6); //latitude
+    Serial.print(";");
+    Serial.print(gps.location.lng(), 6); //longitude
+    Serial.print(";");
+  }
+  else
+  {
+    Serial.print("INVALID"); //latitude
+    Serial.print(";");
+    Serial.print("INVALID"); //longitude
+    Serial.print(";");
+  }
+
+  if (gps.date.isValid())
+  {
+    Serial.print(gps.date.day()); //dia
+    Serial.print("/");
+    Serial.print(gps.date.month()); //mes
+    Serial.print("/");
+    Serial.print(gps.date.year()); //ano
+    Serial.print(";");
+  }
+  else
+  {
+    Serial.print("INVALID");
+    Serial.print(";");
+  }
+
+  if (gps.time.isValid())
+  {
+    if (gps.time.hour() < 10) Serial.print("0");
+    Serial.print(gps.time.hour()); //hora
+    Serial.print(":");
+    if (gps.time.minute() < 10) Serial.print("0");
+    Serial.print(gps.time.minute()); //minuto
+    Serial.print(":");
+    if (gps.time.second() < 10) Serial.print("0");
+    Serial.print(gps.time.second()); //segundo
+    Serial.print(".");
+    if (gps.time.centisecond() < 10) Serial.print("0");
+    Serial.print(gps.time.centisecond());
+    Serial.print(";");
+  }
+  else
+  {
+    Serial.print("INVALID");
+    Serial.print(";");
+  }
+  Serial.println();
 }
