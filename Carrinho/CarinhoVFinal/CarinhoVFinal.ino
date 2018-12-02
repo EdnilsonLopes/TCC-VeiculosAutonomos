@@ -1,8 +1,9 @@
 //@Autor: Ednilson Brito Lopes
 #include <Servo.h>  //Inclui a biblioteca de manipulação de servos
-#include <TimeLib.h>
 #include <TinyGPS++.h>
-#include <SoftwareSerial.h>
+#include <NeoSWSerial.h>
+//Carrega a biblioteca do sensor ultrassonico
+#include <Ultrasonic.h>
 
 //Definindo os pinos
 #define trigPin A0 //Pino TRIG do sensor no pino analógico A0
@@ -14,14 +15,17 @@
 #define in4 6 //Pino do motor B
 #define enB 7 //Pino que mantem a velocidade do motorB
 
-//Pinos utilizados para conexao do modulo GY-NEO6MV2
-static const int RXPin = 11, TXPin = 12;
+//Pinos utilizados para conexao do modulo GPS
+static const int RXPin = 9, TXPin = 10;
 
 //Objeto TinyGPS++
 TinyGPSPlus gps;
 
 //Conexao serial do modulo GPS
-SoftwareSerial Serial_GPS(RXPin, TXPin);
+NeoSWSerial Serial_GPS(RXPin, TXPin);
+
+//Inicializa o sensor nos pinos definidos acima
+Ultrasonic ultrasonic(trigPin, echoPin);
 
 int tempoGirar = 1;//esse é o tempo para o robô girar em 45º com uma bateria de 9v.
 int distanciaObstaculo = 37; //distância para o robô parar e recalcular o melhor caminho
@@ -34,13 +38,15 @@ long distancia_cm = 0;
 int minimumRange = 5; //tempo de resposta do sensor
 int maximumRange = 200;
 
+boolean isIdentificado = false;
+
 void setup() {
   Serial.begin(9600); // inicializa a comunicação serial para mostrar dados
   //Baud rate Modulo GPS
   Serial_GPS.begin(9600);
   servo_ultra_sonico.attach(8);  // Define o mini servo motor ligado no pino digital 8.
-  pinMode(trigPin, OUTPUT); //define o pino TRIG como saída
-  pinMode(echoPin, INPUT);  //define o pino ECHO como entrada
+  //pinMode(trigPin, OUTPUT); //define o pino TRIG como saída
+  //pinMode(echoPin, INPUT);  //define o pino ECHO como entrada
   pinMode(in1, OUTPUT);
   pinMode(in2, OUTPUT);
   pinMode(in3, OUTPUT);
@@ -60,6 +66,14 @@ void setup() {
 }
 
 void loop() {
+  while (!isIdentificado) {
+    buscaSinalGPS();
+    if (millis() > 2000 && gps.charsProcessed() < 10)
+    {
+      Serial.println(F("No GPS detected: check wiring."));
+      isIdentificado = true;
+    }
+  }
   pensar(); //inicia a função pensar
 }
 
@@ -235,7 +249,7 @@ int calcularDistanciaCentro() {
 
 // Função para calcular a distância da esquerda
 int calcularDistanciaEsquerda() {
-  servo_ultra_sonico.write(180);
+  servo_ultra_sonico.write(170);
   delay(200);
   int leituraDoSonar = lerSonar();
   delay(500);
@@ -248,13 +262,15 @@ int calcularDistanciaEsquerda() {
 
 // Função para ler e calcular a distância do sensor ultrassônico
 int lerSonar() {
-  digitalWrite(trigPin, LOW); //não envia som
-  delayMicroseconds(2);
-  digitalWrite(trigPin, HIGH); //envia som
-  delayMicroseconds(10);
-  digitalWrite(trigPin, LOW); //não envia o som e espera o retorno do som enviado
-  duracao = pulseIn(echoPin, HIGH); //Captura a duração em tempo do retorno do som.
-  distancia_cm = duracao / 56; //Calcula a distância
+  //digitalWrite(trigPin, LOW); //não envia som
+  //delayMicroseconds(2);
+  //digitalWrite(trigPin, HIGH); //envia som
+  //delayMicroseconds(10);
+  //digitalWrite(trigPin, LOW); //não envia o som e espera o retorno do som enviado
+  //duracao = pulseIn(echoPin, HIGH); //Captura a duração em tempo do retorno do som.
+  //distancia_cm = duracao / 56; //Calcula a distância
+  long microsec = ultrasonic.timing();
+  distancia_cm = ultrasonic.convert(microsec, Ultrasonic::CM);
   delay(30);
   return distancia_cm;             // Retorna a distância
 }
@@ -263,6 +279,21 @@ int lerSonar() {
 void reposicionaServoSonar() {
   servo_ultra_sonico.write(90);
   delay(200);
+}
+
+void buscaSinalGPS() {
+  //Conexao com modulo GPS
+  while (Serial_GPS.available() > 0)
+    if (gps.encode(Serial_GPS.read()))
+      displayInfo();
+
+  if (millis() > 5000 && gps.charsProcessed() < 10)
+  {
+    Serial.println(F("No GPS detected: check wiring."));
+    //while (true);
+  }
+
+  //delay(1000);
 }
 
 void displayInfo()
@@ -274,9 +305,11 @@ void displayInfo()
     Serial.print(";");
     Serial.print(gps.location.lng(), 6); //longitude
     Serial.print(";");
+    isIdentificado = true;
   }
   else
   {
+    isIdentificado = false;
     Serial.print("INVALID"); //latitude
     Serial.print(";");
     Serial.print("INVALID"); //longitude
@@ -291,9 +324,11 @@ void displayInfo()
     Serial.print("/");
     Serial.print(gps.date.year()); //ano
     Serial.print(";");
+    isIdentificado = true;
   }
   else
   {
+    isIdentificado = false;
     Serial.print("INVALID");
     Serial.print(";");
   }
@@ -312,11 +347,15 @@ void displayInfo()
     if (gps.time.centisecond() < 10) Serial.print("0");
     Serial.print(gps.time.centisecond());
     Serial.print(";");
+    isIdentificado = true;
   }
   else
   {
+    isIdentificado = false;
     Serial.print("INVALID");
     Serial.print(";");
   }
+  Serial.print(distancia_cm);
+  Serial.print(";");
   Serial.println();
 }

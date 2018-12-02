@@ -1,16 +1,16 @@
 
 #include <TimeLib.h>
 #include <TinyGPS++.h>
-#include <SoftwareSerial.h>
+#include <NeoSWSerial.h>
 
 //Pinos utilizados para conexao do modulo GY-NEO6MV2
-static const int RXPin = 11, TXPin = 12;
+static const int RXPin = 9, TXPin = 10;
 
 //Objeto TinyGPS++
 TinyGPSPlus gps;
 
 //Conexao serial do modulo GPS
-SoftwareSerial Serial_GPS(RXPin, TXPin);
+NeoSWSerial Serial_GPS(RXPin, TXPin);
 
 void draw()
 {
